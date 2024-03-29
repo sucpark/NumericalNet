@@ -23,10 +23,10 @@ class NumericOperationDataset(torch.utils.data.Dataset):
         return value1, unit1, value2, unit2, operation
     
 class NumericNet(nn.Module):
-    def __init__(self, use_bias=True):
+    def __init__(self, target_units, use_bias=True):
         super(NumericNet, self).__init__()
         
-        self.target_units = target_units
+        # self.target_units = target_units
         self.num_units = len(target_units)
         # self.unit_to_idx = {unit: idx for idx, unit in enumerate(target_units)}
         
