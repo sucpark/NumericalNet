@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor, nn
-
 
 class NumericOperationDataset(torch.utils.data.Dataset):
     def __init__(self, data, unit_to_idx, operation_to_idx):
