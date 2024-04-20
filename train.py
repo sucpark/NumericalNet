@@ -1,21 +1,17 @@
-# python train.py --dataset_path ./datasets/numerical_dataset_v1_size5000.xlsx --experiment_name test_v1
+# CUDA_VISIBLE_DEVICES=0 python train.py --dataset_path ./datasets/numerical_dataset_v1_size50000.xlsx --experiment_name test_v2 --num_epochs 50 --batch_size 512
 
 import os
 import argparse
 import pandas as pd
-import numpy as np
-import json
 import time
 
 import matplotlib.pyplot as plt
-import umap.umap_ as umap
 import torch
 from torch.utils.data import DataLoader
 from transformers import get_scheduler
 from sklearn.model_selection import train_test_split
 
-from utils import get_digit_and_unit
-from model import NumericOperationDataset, NumericalNet
+from model import NumericOperationDataset, NumericalNet, NumericalLoss
 
 def define_argparse():
     parser = argparse.ArgumentParser(description='Train NumericalNet')
@@ -99,23 +95,24 @@ def main(args):
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=num_training_steps
     )
+    criterion = NumericalLoss()
     
-    cnt, best_loss = 0, float('inf')
+    count, best_loss = 0, float('inf')
     train_losses, valid_losses = [], []
     
-    for idx, epoch in enumerate(range(args.num_epochs)):
+    for epoch in range(args.num_epochs):
         model.train()
         train_loss = 0
         start = time.time()
-        
+
         for batch in tr_dl:
             batch = [tensor.to(args.device) for tensor in batch]
             value1, unit1, value2, unit2, operation = batch
             
             value1_unit1_embedding = model(value1, unit1)
             value2_unit2_embedding = model(value2, unit2)
-            
-            loss = model.loss_fn(value1_unit1_embedding, value2_unit2_embedding, operation)
+
+            loss = criterion(value1_unit1_embedding, value2_unit2_embedding)
             train_loss += loss.item()
             
             optimizer.zero_grad()
@@ -136,7 +133,7 @@ def main(args):
                 value1_unit1_embedding = model(value1, unit1)
                 value2_unit2_embedding = model(value2, unit2)
 
-                loss = model.loss_fn(value1_unit1_embedding, value2_unit2_embedding, operation)
+                loss = criterion(value1_unit1_embedding, value2_unit2_embedding)
                 val_loss += loss.item()
             
             val_loss /= len(val_dl)
@@ -148,11 +145,11 @@ def main(args):
         if val_loss < best_loss:
             best_loss = val_loss
             torch.save(model.state_dict(), f"{args.model_path}/best_model.pth")
-            counter = 0
+            count = 0
             best_epoch = epoch
         else:
-            counter += 1
-            if counter == args.early_stopping_patience:
+            count += 1
+            if count == args.early_stopping_patience:
                 print(f"Early stopping at epoch {epoch}")
                 break
 

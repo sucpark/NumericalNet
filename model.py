@@ -99,27 +99,26 @@ class NumericalNet(nn.Module):
             unit_embedding = layer(unit_embedding)
         return unit_embedding 
     
-    def loss_fn(self, embedding1, embedding2, operations, alpha=1.0, lambda_reg=0.1, target_norm=1.0):
-        # Masks for equality
-        equality_mask = (operations == self.operation_to_idx['='])
-        
-        # Apply masks to select relevant embeddings
-        masked_embedding1 = torch.masked_select(embedding1, equality_mask)
-        masked_embedding2 = torch.masked_select(embedding2, equality_mask)
-        
-        # Compute MSE Loss on the masked embeddings
-        mse_loss = F.mse_loss(masked_embedding1, masked_embedding2)
-        
+class NumericalLoss(nn.Module):
+    def __init__(self, alpha=1.2, gamma=0.8):
+        super(NumericalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, embedding1, embedding2):
         # Compute the L2 norms of the original embeddings
         norm1 = torch.norm(embedding1, p=2, dim=1)
         norm2 = torch.norm(embedding2, p=2, dim=1)
-        
-        # Compute regularization terms to maintain the target norm
-        # This penalizes the squared difference from the target norm
-        norm_reg1 = lambda_reg * torch.sum((norm1 - target_norm) ** 2)
-        norm_reg2 = lambda_reg * torch.sum((norm2 - target_norm) ** 2)
 
-        # Combine MSE loss with the regularization terms
-        total_loss = alpha * mse_loss + norm_reg1 + norm_reg2
+        # Compute MSE Loss on the embeddings
+        mse_loss = F.mse_loss(embedding1, embedding2)
+
+        # Compute sophisticated reciprocal loss
+        epsilon = 1e-8  # Small constant to avoid division by zero
+        norm_ratio = torch.log(norm1 + epsilon) - torch.log(norm2 + epsilon)
+        reciprocal_loss = torch.mean(torch.log(1 + torch.exp(torch.abs(norm_ratio))))
+
+        # Calculate total loss
+        total_loss = self.alpha * mse_loss + self.gamma * reciprocal_loss
         
         return total_loss

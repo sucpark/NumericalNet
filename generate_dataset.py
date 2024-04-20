@@ -1,9 +1,10 @@
+# python generate_dataset.py --size 50000 --version 1 --output_path ./datasets
+
 import random
 import pandas as pd
 from tqdm import tqdm
 import math
 import argparse
-import time
 
 def define_argparse():
     parser = argparse.ArgumentParser(description='Generate numerical dataset')
@@ -62,7 +63,6 @@ def generate_numeric_dataset_v1(size, value_to_multiply_by_unit, max_value=99999
             df = df.reset_index(drop=True)
             trials += 1
             pbar.update(len(df) - pbar.n)
-        pbar.close()
     return df
             
 def generate_numeric_dataset_v2(size, value_to_multiply_by_unit, max_value=99999, max_precision=4):

@@ -1,9 +1,7 @@
-# python visualize.py --model_path ./outputs/test_v1 
+# python visualize.py --model_path ./outputs/test_v2
 
 import os
-import pandas as pd
 import argparse
-import json
 import torch
 import umap.umap_ as umap
 import matplotlib.pyplot as plt
@@ -110,7 +108,7 @@ def plot_unit_embeddings(model, units, colors, title="2D Visualization of Unit E
         colors[:len(units)], f"{args.output_path}/unit_embedding.png", 'text', extra_text=units
     )
     
-def plot_numerical_embeddings(digit_unit_ranges, model, title="2D Visualization of Numeric w/ Digit Embeddings", cmap='tab20'):
+def plot_numerical_embeddings(digit_unit_ranges, model, title="2D Visualization of Numeric w/ Digit Embeddings", cmap='tab20', advanced=False):
     numeric_digit_embeddings = []
     numeric_digit_labels = []
     with torch.no_grad():
@@ -131,9 +129,10 @@ def plot_numerical_embeddings(digit_unit_ranges, model, title="2D Visualization 
     colors = [cmap(i) for i in range(len(digit_unit_ranges))] 
 
     # Draw Plots
+    output_fn = "numerical_embedding.png" if not advanced else "advanced_numerical_embedding.png"
     plot_embeddings(
         embeddings_2d, labels, labels_text, title, 
-        colors, f"{args.output_path}/numerical_embedding.png", 'scatter'
+        colors, f"{args.output_path}/{output_fn}", 'scatter'
     )
 
 def main(args):
@@ -189,6 +188,22 @@ def main(args):
         digit_unit_ranges, 
         model, 
         title="2D Visualization of Numerical Embeddings (Digit + Unit)"
+    )
+    
+        # get numerical embeddings
+    digit_unit_ranges = [
+        ("mg", 100, 200, 1),
+        ("g", 0.2, 0.3, 0.001),
+        ("ml", 400, 500, 1),
+        ("l", 0.5, 0.6, 0.001),
+        ("cm", 100, 200, 1),
+        ("m", 2, 3, 0.01),
+    ]
+    plot_numerical_embeddings(
+        digit_unit_ranges, 
+        model, 
+        title="2D Visualization of Advanced Numerical Embeddings (Digit + Unit)",
+        advanced=True
     )
     
 if __name__ == "__main__":
