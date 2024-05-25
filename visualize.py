@@ -11,9 +11,13 @@ from matplotlib import colormaps
 def define_argparse():
     parser = argparse.ArgumentParser(description='Visualize the trained model')
     parser.add_argument('--model_path', type=str, required=True, help='Path to the trained model')
+    parser.add_argument('--output_path', type=str, default=None, help='Path to save the visualizations')
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use")
     args = parser.parse_args()
-    args.output_path = os.path.join(args.model_path, "visualizations")
+    
+    if args.output_path is None:
+        args.output_path = os.path.join(args.model_path, "visualizations")
+    
     return args
 
 def get_digit_range(start, end, step, device):
@@ -74,13 +78,16 @@ def plot_embeddings(embeddings_2d, labels, label_texts, title, colors, output_pa
     plt.xlabel('UMAP Dimension 1')
     plt.ylabel('UMAP Dimension 2')
     plt.title(title)
-    plt.legend() if plot_type == 'scatter' else None
+    plt.legend(loc='upper left', bbox_to_anchor=(1,1)) if plot_type == 'scatter' else None
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(output_path)
+    
+    if output_path is not None:
+        plt.savefig(output_path, bbox_inches='tight')
+
     plt.close()
 
-def plot_digit_embeddings(embeddings, labels, labels_text, title="2D Visualization of Numeric Embeddings", cmap='tab20'):
+def plot_digit_embeddings(embeddings, labels, labels_text, output_path=None, title="2D Visualization of Numeric Embeddings", cmap='tab20'):
 
     concat_embeddings = np.concatenate(embeddings)
     embeddings_2d = apply_umap(concat_embeddings)
@@ -91,11 +98,12 @@ def plot_digit_embeddings(embeddings, labels, labels_text, title="2D Visualizati
     cmap = colormaps[cmap]
     colors = [cmap(i) for i in range(len(labels_text))]
 
-    # Draw Plots
-    plot_embeddings(embeddings_2d, concat_labels, labels_text, title, colors, f"{args.output_path}/digit_embedding.png")
+    # Draw Plots    
+    output_fn = os.path.join(output_path, "digit_embedding.png") if output_path is not None else None    
+    plot_embeddings(embeddings_2d, concat_labels, labels_text, title, colors, output_fn)
 
 
-def plot_unit_embeddings(unit_list, model, title="2D Visualization of Unit Embedding"):
+def plot_unit_embeddings(unit_list, model, output_path=None, title="2D Visualization of Unit Embedding"):
     unit_embeddings = get_unit_embeddings(unit_list, model, model.device)
     unit_embeddings_2d = apply_umap(unit_embeddings)
 
@@ -110,12 +118,10 @@ def plot_unit_embeddings(unit_list, model, title="2D Visualization of Unit Embed
             colors.append("pink")
     
     # Draw Plots
-    plot_embeddings(
-        unit_embeddings_2d, None, None, title, 
-        colors, f"{args.output_path}/unit_embedding.png", 'text', texts
-    )
+    output_fn = os.path.join(output_path, "unit_embedding.png") if output_path is not None else None    
+    plot_embeddings(unit_embeddings_2d, None, None, title, colors, output_fn, 'text', texts)
 
-def plot_joint_embeddings(embeddings, labels, labels_text, title="2D Visualization of Numeric w/ Digit Embeddings", cmap='tab20', advanced=False):
+def plot_joint_embeddings(embeddings, labels, labels_text, output_path=None, title="2D Visualization of Numeric w/ Digit Embeddings", cmap='tab20', advanced=False):
 
     concat_embeddings = np.concatenate(embeddings)
     embeddings_2d = apply_umap(concat_embeddings)
@@ -126,11 +132,9 @@ def plot_joint_embeddings(embeddings, labels, labels_text, title="2D Visualizati
     colors = [cmap(i) for i in range(len(labels_text))] 
 
     # Draw Plots
-    output_fn = "joint_embedding.png" if not advanced else "advanced_joint_embedding.png"
-    plot_embeddings(
-        embeddings_2d, concat_labels, labels_text, title, 
-        colors, f"{args.output_path}/{output_fn}", 'scatter'
-    )
+    output_fn_temp = "joint_embedding.png" if not advanced else "advanced_joint_embedding.png"
+    output_fn = os.path.join(output_path, output_fn_temp) if output_path is not None else None
+    plot_embeddings(embeddings_2d, concat_labels, labels_text, title, colors, output_fn, 'scatter')
 
 def main(args):
 
@@ -162,6 +166,7 @@ def main(args):
         digit_embeddings,
         digit_labels,
         digit_labels_text,
+        args.output_path,
         title="2D Visualization of Numeric Embeddings"
     )
     
@@ -170,6 +175,7 @@ def main(args):
     plot_unit_embeddings(
         units,
         model,
+        args.output_path,
         title="2D Visualization of Unit Embeddings"
     )
     
@@ -200,6 +206,7 @@ def main(args):
         joint_embeddings, 
         joint_labels,
         label_texts,
+        args.output_path,
         title="2D Visualization of Joint Embeddings (Digit + Unit)"
     )
     
@@ -229,6 +236,7 @@ def main(args):
         joint_embeddings, 
         joint_labels,
         label_texts,
+        args.output_path,
         title="2D Visualization of Joint Embeddings (Digit + Unit)",
         advanced=True
     )

@@ -17,11 +17,13 @@ def define_argparse():
     parser = argparse.ArgumentParser(description='Train NumericalNet')
     parser.add_argument('--dataset_path', type=str, default="./datasets/numerical_dataset_v1.xlsx", help='Path to the dataset')
     parser.add_argument('--output_path', type=str, default="./outputs", help='Path to save the trained model')
-    parser.add_argument('--experiment_name', type=str, required=True, help='Name of the model')
+    parser.add_argument('--experiment_name', type=str, default=None, help='Name of the model')
 
     parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
-    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--dim', type=int, default=512, help='Dimension of the embeddings')
+    parser.add_argument('--num_layers', type=int, default=8, help='Number of layers in the model')
+    parser.add_argument('--learning_rate', type=float, default=0.005, help='Learning rate')
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for dataloader")
     parser.add_argument("--num_warmup_steps", type=int, default=1000, help="Number of warmup steps for scheduler")
     parser.add_argument("--early_stopping_patience", type=int, default=2, help="Early stopping patience")
@@ -37,6 +39,9 @@ def define_argparse():
     
     args.visualize_path = os.path.join(args.model_path, "visualizations")
     os.makedirs(args.visualize_path, exist_ok=True)
+    
+    if args.experiment_name is None:
+        args.experiment_name = f"test_{args.num_epochs}_{args.dim}_{args.batch_size}"
     
     return args
 
@@ -82,7 +87,7 @@ def main(args):
     tr_dl = DataLoader(tr_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     val_dl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     
-    model = NumericalNet(unit_to_idx, operation_to_idx, args.device, num_layers=3).to(args.device)
+    model = NumericalNet(unit_to_idx, operation_to_idx, args.device, dim=args.dim, num_layers=args.num_layers).to(args.device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.learning_rate,
