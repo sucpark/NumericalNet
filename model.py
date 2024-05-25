@@ -3,11 +3,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 from deepctr_torch.layers.interaction import CrossNet
 
+unit_value_dict = {
+    "kg": 1000,
+    "g": 1,
+    "mg": 0.001,
+    "l": 1,
+    "ml": 0.001,
+    "m": 1,
+    "cm": 0.01,
+    "mm": 0.001,
+    "km": 1000,
+}
+
 class NumericOperationDataset(torch.utils.data.Dataset):
-    def __init__(self, data, unit_to_idx, operation_to_idx):
+    def __init__(self, data, operation_to_idx):
         self.data = data
-        self.unit_to_idx = unit_to_idx
         self.operation_to_idx = operation_to_idx
+        self.unit_value_dict = unit_value_dict
 
     def __len__(self):
         return len(self.data)
@@ -16,27 +28,21 @@ class NumericOperationDataset(torch.utils.data.Dataset):
         value1, unit1, operation, value2, unit2 = self.data[idx]
         value1 = torch.tensor([value1], dtype=torch.float32)
         value2 = torch.tensor([value2], dtype=torch.float32)
-        unit1 = torch.tensor([self.unit_to_idx[unit1]], dtype=torch.long)
-        unit2 = torch.tensor([self.unit_to_idx[unit2]], dtype=torch.long)
+        unit1 = torch.tensor([self.unit_value_dict[unit1]], dtype=torch.float32)
+        unit2 = torch.tensor([self.unit_value_dict[unit2]], dtype=torch.float32)
         operation = torch.tensor([self.operation_to_idx[operation]], dtype=torch.long)
 
         return value1, unit2, value2, unit2, operation
     
 class NumericalNet(nn.Module):
-    def __init__(self, unit_to_idx, operation_to_idx, device, dim=200, num_layers=8, use_bias=True):
+    def __init__(self, device, dim=200, num_layers=8, use_bias=True):
         super(NumericalNet, self).__init__()
         
-        self.unit_to_idx = unit_to_idx
-        self.idx_to_unit = {v: k for k, v in unit_to_idx.items()}
-        self.operation_to_idx = operation_to_idx
+        self.unit_value_dict = unit_value_dict
         self.device = device
-        self.unit_embeddings = nn.Embedding(len(self.unit_to_idx), dim)
         self.layer_norm = nn.LayerNorm(dim)
-        self.crossnet = CrossNet(in_features=2*dim, parameterization="matrix")
+        self.crossnet = CrossNet(in_features=2*dim, parameterization="matrix") 
 
-        # Initialize unit embeddings
-        nn.init.xavier_uniform_(self.unit_embeddings.weight)
-        
         # Build digit layers
         self.digit_layers = nn.ModuleList()
         self.digit_layers.append(nn.Linear(in_features=1, out_features=dim, bias=use_bias))
@@ -50,7 +56,7 @@ class NumericalNet(nn.Module):
 
         # Build unit layers
         self.unit_layers = nn.ModuleList()
-        self.unit_layers.append(nn.Linear(in_features=dim, out_features=dim, bias=use_bias))
+        self.unit_layers.append(nn.Linear(in_features=1, out_features=dim, bias=use_bias))
         nn.init.xavier_uniform_(self.unit_layers[0].weight)
         for idx in range(num_layers):
             self.unit_layers.append(nn.Linear(in_features=dim, out_features=dim, bias=use_bias))
@@ -77,19 +83,17 @@ class NumericalNet(nn.Module):
         
         return digit_embedding, unit_embedding, joint_embedding
 
-    def get_digit_embedding(self, digit):
-        digit_embedding = digit
+    def get_digit_embedding(self, digit_embedding):
         for layer in self.digit_layers:
             digit_embedding = layer(digit_embedding)
         return digit_embedding
 
-    def get_unit_embedding(self, unit):
-        unit_embedding = self.unit_embeddings(unit).squeeze()
+    def get_unit_embedding(self, unit_embedding):
         for layer in self.unit_layers:
             unit_embedding = layer(unit_embedding)
         return unit_embedding
     
-    def get_joint_embedding(self, digit, unit): # digit, unit: torch.Size([512, 1])
+    def get_joint_embedding(self, digit, unit): # digit, unit: torch.Size([batch_size, 1])
         digit_embedding = self.get_digit_embedding(digit)
         unit_embedding = self.get_unit_embedding(unit)
         digit_unit = torch.concatenate([digit_embedding, unit_embedding], dim=-1)
