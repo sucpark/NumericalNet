@@ -84,7 +84,7 @@ class NumericalNet(nn.Module):
         return digit_embedding
 
     def get_unit_embedding(self, unit):
-        unit_embedding = self.unit_embeddings(unit).squeeze()
+        unit_embedding = self.unit_embeddings(unit).squeeze(1) # squeeze remove single-dimension
         for layer in self.unit_layers:
             unit_embedding = layer(unit_embedding)
         return unit_embedding
