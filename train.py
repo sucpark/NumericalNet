@@ -24,7 +24,7 @@ def define_argparse():
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for dataloader")
     parser.add_argument("--num_warmup_steps", type=int, default=1000, help="Number of warmup steps for scheduler")
-    parser.add_argument("--early_stopping_patience", type=int, default=5, help="Early stopping patience")
+    parser.add_argument("--early_stopping_patience", type=int, default=2, help="Early stopping patience")
     parser.add_argument("--weight_decay", type=float, default=5e-4, help="Weight decay")
     parser.add_argument("--lr_scheduler", type=str, default="cosine", help="Learning rate scheduler")
     parser.add_argument("--seed", type=int, default=42, help="Seed for reproducibility")
@@ -95,7 +95,7 @@ def main(args):
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=num_training_steps
     )
-    criterion = NumericalLoss()
+    criterion = NumericalLoss(model.operation_to_idx)
     
     count, best_loss = 0, float('inf')
     train_losses, valid_losses = [], []
@@ -108,11 +108,10 @@ def main(args):
         for batch in tr_dl:
             batch = [tensor.to(args.device) for tensor in batch]
             value1, unit1, value2, unit2, operation = batch
-            
-            value1_unit1_embedding = model(value1, unit1)
-            value2_unit2_embedding = model(value2, unit2)
+            _, _, value1_unit1_emb = model(value1, unit1)
+            _, _, value2_unit2_emb = model(value2, unit2)
 
-            loss = criterion(value1_unit1_embedding, value2_unit2_embedding)
+            loss = criterion(value1_unit1_emb, value2_unit2_emb, operation)
             train_loss += loss.item()
             
             optimizer.zero_grad()
@@ -130,10 +129,10 @@ def main(args):
                 batch = [tensor.to(args.device) for tensor in batch]
                 value1, unit1, value2, unit2, operation = batch
 
-                value1_unit1_embedding = model(value1, unit1)
-                value2_unit2_embedding = model(value2, unit2)
+                _, _, value1_unit1_emb = model(value1, unit1)
+                _, _, value2_unit2_emb = model(value2, unit2)
 
-                loss = criterion(value1_unit1_embedding, value2_unit2_embedding)
+                loss = criterion(value1_unit1_emb, value2_unit2_emb, operation)
                 val_loss += loss.item()
             
             val_loss /= len(val_dl)

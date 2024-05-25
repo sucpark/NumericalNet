@@ -1,4 +1,4 @@
-# python generate_dataset.py --size 50000 --version 1 --output_path ./datasets
+# python generate_dataset.py --size 50000 --version 2 --output_path ./datasets
 
 import random
 import pandas as pd
