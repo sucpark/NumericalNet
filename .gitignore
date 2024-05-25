@@ -161,3 +161,8 @@ cython_debug/
 
 # Output folder
 output/
+outdated/
+outputs/
+
+# .xlsx file
+*.xlsx
