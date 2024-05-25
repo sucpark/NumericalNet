@@ -33,13 +33,13 @@ def get_digit_embeddings(model, start=0, end=10, step=0.1):
     numeric_embeddings = numeric_embeddings.squeeze(1)
     return numeric_embeddings.cpu().numpy()
 
-def get_target_units(unit_list, unit_to_idx, device):
-    target_units = [[unit_to_idx[unit]] for unit in unit_list]
-    target_units = torch.tensor(target_units, dtype=torch.long).to(device)
+def get_target_units(unit_list, unit_value_dict, device):
+    target_units = [[unit_value_dict[unit]] for unit in unit_list]
+    target_units = torch.tensor(target_units, dtype=torch.float32).to(device)
     return target_units
 
 def get_unit_embeddings(unit_list, model, device):
-    target_units = get_target_units(unit_list, model.unit_to_idx, device)
+    target_units = get_target_units(unit_list, model.unit_value_dict, device)
     model.eval()
     with torch.no_grad():
         unit_embeddings = model.get_unit_embedding(target_units)
@@ -101,7 +101,6 @@ def plot_digit_embeddings(embeddings, labels, labels_text, output_path=None, tit
     # Draw Plots    
     output_fn = os.path.join(output_path, "digit_embedding.png") if output_path is not None else None    
     plot_embeddings(embeddings_2d, concat_labels, labels_text, title, colors, output_fn)
-
 
 def plot_unit_embeddings(unit_list, model, output_path=None, title="2D Visualization of Unit Embedding"):
     unit_embeddings = get_unit_embeddings(unit_list, model, model.device)
@@ -194,7 +193,7 @@ def main(args):
         temp_digit_range = get_digit_range(start, end, step, model.device)
         
         units = [unit]*len(temp_digit_range)
-        temp_target_units = get_target_units(units, model.unit_to_idx, model.device)
+        temp_target_units = get_target_units(units, model.unit_value_dict, model.device)
         temp_joint_embedding = get_joint_embeddings(temp_digit_range, temp_target_units, model)
     
         joint_embeddings.append(temp_joint_embedding)
@@ -224,7 +223,7 @@ def main(args):
         temp_digit_range = get_digit_range(start, end, step, model.device)
         
         units = [unit]*len(temp_digit_range)
-        temp_target_units = get_target_units(units, model.unit_to_idx, model.device)
+        temp_target_units = get_target_units(units, model.unit_value_dict, model.device)
         temp_joint_embedding = get_joint_embeddings(temp_digit_range, temp_target_units, model)
     
         joint_embeddings.append(temp_joint_embedding)

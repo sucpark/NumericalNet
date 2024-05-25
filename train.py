@@ -70,24 +70,23 @@ def preprocess_data(df):
     
     target_units = list(target_units)
     target_units = sorted(target_units, key=lambda x: x[-1]) # sort by the last character
-    unit_to_idx = {unit: idx for idx, unit in enumerate(target_units)}
     
     target_operations = ["=", "<", ">"]
     operation_to_idx = {operation: idx for idx, operation in enumerate(target_operations)}
-    
-    return new_dataset, unit_to_idx, operation_to_idx
+
+    return new_dataset, operation_to_idx
 
 def main(args):
     df = pd.read_excel(args.dataset_path, engine='openpyxl')
-    df, unit_to_idx, operation_to_idx = preprocess_data(df)
+    df, operation_to_idx = preprocess_data(df)
     
     train_dataset, valid_dataset = train_test_split(df, test_size=0.2, random_state=args.seed)
-    tr_ds = NumericOperationDataset(train_dataset, unit_to_idx, operation_to_idx)
-    val_ds = NumericOperationDataset(valid_dataset, unit_to_idx, operation_to_idx)
+    tr_ds = NumericOperationDataset(train_dataset, operation_to_idx)
+    val_ds = NumericOperationDataset(valid_dataset, operation_to_idx)
     tr_dl = DataLoader(tr_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     val_dl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     
-    model = NumericalNet(unit_to_idx, operation_to_idx, args.device, dim=args.dim, num_layers=args.num_layers).to(args.device)
+    model = NumericalNet(args.device, dim=args.dim, num_layers=args.num_layers).to(args.device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.learning_rate,
@@ -100,7 +99,7 @@ def main(args):
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=num_training_steps
     )
-    criterion = NumericalLoss(model.operation_to_idx)
+    criterion = NumericalLoss(operation_to_idx)
     
     count, best_loss = 0, float('inf')
     train_losses, valid_losses = [], []
@@ -164,7 +163,6 @@ def main(args):
     print(f"Best model found at epoch {best_epoch}")
     
     plot_loss(train_losses, valid_losses, title="Train and Valid Loss per Epoch")
-    
     
 if __name__ == "__main__":
     args = define_argparse()
