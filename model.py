@@ -60,7 +60,7 @@ class NumericalNet(nn.Module):
         nn.init.xavier_uniform_(self.unit_layers[0].weight)
         for idx in range(num_layers):
             self.unit_layers.append(nn.Linear(in_features=dim, out_features=dim, bias=use_bias))
-            nn.init.xavier_uniform_(self.unit_layers[0].weight)
+            nn.init.xavier_uniform_(self.unit_layers[-1].weight)
             if idx % 2 == 0:
                 self.unit_layers.append(nn.LayerNorm(dim))
         self.unit_layers.append(nn.Linear(in_features=dim, out_features=dim, bias=use_bias))
