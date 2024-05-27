@@ -1,5 +1,6 @@
-# python generate_dataset.py --size 50000 --version 2 --output_path ./datasets
+# python generate_dataset.py --size 500 --version 2 --output_path ./datasets --max_value 9999999 --max_precision 4 --negative
 
+import os
 import random
 import pandas as pd
 from tqdm import tqdm
@@ -13,8 +14,10 @@ def define_argparse():
     parser.add_argument('--output_path', type=str, default="./datasets", help='Path to save the generated dataset')
     parser.add_argument('--version', type=int, default=1, help='Version of the dataset to generate')
     parser.add_argument('--max_value', type=int, default=99999, help='Maximum value of the generated numbers')
+    parser.add_argument('--negative', action="store_true", help='Whether to include negative numbers')
     
     args = parser.parse_args()
+    os.makedirs(args.output_path, exist_ok=True)
     
     args.output_fn = f"numerical_dataset_v{args.version}_size{args.size}.xlsx"
     
@@ -65,7 +68,7 @@ def generate_numeric_dataset_v1(size, value_to_multiply_by_unit, max_value=99999
             pbar.update(len(df) - pbar.n)
     return df
             
-def generate_numeric_dataset_v2(size, value_to_multiply_by_unit, max_value=99999, max_precision=4):
+def generate_numeric_dataset_v2(size, value_to_multiply_by_unit, max_value=99999, max_precision=5):
     
     target_units = list(value_to_multiply_by_unit.keys())
     df = pd.DataFrame([], columns=["value1", "unit1", "operation", "value2", "unit2"])
@@ -130,7 +133,7 @@ def generate_numeric_dataset_v2(size, value_to_multiply_by_unit, max_value=99999
     
     return df
             
-def generate_numeric_dataset_v3(size, value_to_multiply_by_unit, max_value=99999, max_precision=4):
+def generate_numeric_dataset_v3(size, value_to_multiply_by_unit,  max_value=99999, max_precision=5):
     
     target_units = list(value_to_multiply_by_unit.keys())
     df = pd.DataFrame([], columns=["value1", "unit1", "operation", "diff_value", "diff_unit", "value2", "unit2"])
@@ -198,6 +201,20 @@ def generate_numeric_dataset_v3(size, value_to_multiply_by_unit, max_value=99999
     
     return df
 
+def gen_negative_data(df):
+    new_df = []
+    
+    for _, row in df.iterrows():
+        if row['operation'] == "=":
+            new_df.append([-1*row['value1'], row['unit1'], "=", -1*row['value2'], row['unit2']])
+        elif row['operation'] == "<":
+            new_df.append([-1*row['value1'], row['unit1'], ">", -1*row['value2'], row['unit2']])
+        elif row['operation'] == ">":
+            new_df.append([-1*row['value1'], row['unit1'], "<", -1*row['value2'], row['unit2']])
+    
+    new_df = pd.DataFrame(new_df, columns=["value1", "unit1", "operation", "value2", "unit2"])
+    return new_df
+
 length_value_to_multiply_by_unit = {
     "km": 0.001,
     "m": 1,
@@ -217,7 +234,7 @@ volumne_value_to_multiply_by_unit = {
 }
 
 def main(args):
-    
+    print(args)
     length_size = int(args.size * 0.4)
     weight_size = int(args.size * 0.3)
     volume_size = args.size - length_size - weight_size
@@ -234,6 +251,11 @@ def main(args):
     volume_df = generate_fn(volume_size, volumne_value_to_multiply_by_unit, max_value=args.max_value, max_precision=args.max_precision)
     
     total_data = pd.concat([length_df, weight_df, volume_df])
+    if args.negative:
+        negative_data = gen_negative_data(total_data)
+        negative_data = negative_data.sample(n=args.size//3, ignore_index=True)
+        print(negative_data)
+        total_data = pd.concat([total_data, negative_data])
     total_data = total_data.sample(n=args.size, ignore_index=True)
 
     total_data.to_excel(f"{args.output_path}/{args.output_fn}", index=False, engine="openpyxl")
