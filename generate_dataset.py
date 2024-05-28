@@ -254,7 +254,6 @@ def main(args):
     if args.negative:
         negative_data = gen_negative_data(total_data)
         negative_data = negative_data.sample(n=args.size//3, ignore_index=True)
-        print(negative_data)
         total_data = pd.concat([total_data, negative_data])
     total_data = total_data.sample(n=args.size, ignore_index=True)
 
