@@ -1,4 +1,4 @@
-# CUDA_VISIBLE_DEVICES=0 python train.py --dataset_path ./datasets/numerical_dataset_v1_size50000.xlsx --experiment_name test_v2 --num_epochs 50 --batch_size 512
+# CUDA_VISIBLE_DEVICES=0 python train.py --dataset_path ./datasets/numerical_dataset_v2_size100000.xlsx --experiment_name 240528_test --num_epochs 10 --batch_size 512
 
 import os
 import argparse
@@ -21,6 +21,7 @@ def define_argparse():
 
     parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+    parser.add_argument('--test_size', type=float, default=0.2, help='Test size')
     parser.add_argument('--dim', type=int, default=512, help='Dimension of the embeddings')
     parser.add_argument('--num_layers', type=int, default=8, help='Number of layers in the model')
     parser.add_argument('--learning_rate', type=float, default=0.005, help='Learning rate')
@@ -33,15 +34,12 @@ def define_argparse():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use")
     
     args = parser.parse_args()
-    
+    args.experiment_name = f"{args.experiment_name}_dim{args.dim}"
     args.model_path = os.path.join(args.output_path, args.experiment_name)
     os.makedirs(args.model_path, exist_ok=True)
     
     args.visualize_path = os.path.join(args.model_path, "visualizations")
     os.makedirs(args.visualize_path, exist_ok=True)
-    
-    if args.experiment_name is None:
-        args.experiment_name = f"test_{args.num_epochs}_{args.dim}_{args.batch_size}"
     
     return args
 
@@ -80,7 +78,7 @@ def main(args):
     df = pd.read_excel(args.dataset_path, engine='openpyxl')
     df, operation_to_idx = preprocess_data(df)
     
-    train_dataset, valid_dataset = train_test_split(df, test_size=0.2, random_state=args.seed)
+    train_dataset, valid_dataset = train_test_split(df, test_size=args.test_size, random_state=args.seed)
     tr_ds = NumericOperationDataset(train_dataset, operation_to_idx)
     val_ds = NumericOperationDataset(valid_dataset, operation_to_idx)
     tr_dl = DataLoader(tr_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
