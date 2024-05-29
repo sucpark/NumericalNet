@@ -242,6 +242,8 @@ def main(args):
         advanced=True
     )
     
+    print("Visualizations saved successfully")
+    
 if __name__ == "__main__":
     args = define_argparse()
     main(args)
